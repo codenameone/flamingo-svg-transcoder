@@ -17,6 +17,7 @@
 package org.pushingpixels.flamingo.api.svg.transcoders;
 
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.PathIterator;
 import java.io.PrintWriter;
 
 /**
@@ -32,10 +33,29 @@ public class EllipseTranscoder extends Transcoder<Ellipse2D> {
     @Override
     public void transcode(Ellipse2D ellipse, PrintWriter output) {
         DoubleTranscoder transcoder = DoubleTranscoder.INSTANCE;
-        output.println("shape = new Ellipse2D.Double(" 
-                + transcoder.transcode(ellipse.getX()) + ", " 
-                + transcoder.transcode(ellipse.getY()) + ", " 
-                + transcoder.transcode(ellipse.getWidth()) + ", " 
-                + transcoder.transcode(ellipse.getHeight()) + ");");
+        PathIterator pathIterator = ellipse.getPathIterator(null);
+        double[] coords = new double[6];
+        output.println("shape = new GeneralPath();");
+        for (; !pathIterator.isDone(); pathIterator.next()) {
+            int type = pathIterator.currentSegment(coords);
+            switch (type) {
+                case PathIterator.SEG_CUBICTO:
+                    output.println("((GeneralPath) shape).curveTo(" + coords[0] + ", " + coords[1] + ", " + coords[2] + ", " + coords[3] + ", " + coords[4] + ", " + coords[5] + ");");
+                    break;
+                case PathIterator.SEG_QUADTO:
+                    output.println("((GeneralPath) shape).quadTo(" + coords[0] + ", " + coords[1] + ", " + coords[2] + ", " + coords[3] + ");");
+                    break;
+                case PathIterator.SEG_MOVETO:
+                    output.println("((GeneralPath) shape).moveTo(" + coords[0] + ", " + coords[1] + ");");
+                    break;
+                case PathIterator.SEG_LINETO:
+                    output.println("((GeneralPath) shape).lineTo(" + coords[0] + ", " + coords[1] + ");");
+                    break;
+                case PathIterator.SEG_CLOSE:
+                    output.println("((GeneralPath) shape).closePath();");
+                    break;
+            }
+        }
+        output.println();
     }
 }
